@@ -1,0 +1,10 @@
+__pycache__/
+dist
+build
+.DS_Store
+dvpOAuth.egg-info
+*.log
+.vscode
+Makefile
+tests
+*.password
