@@ -33,7 +33,7 @@ def singleton(cls):
     return wrapper
 
 
-def request_new_token():
+def request_new_token(cert_path, key_path):
     session = requests.Session()
     session.proxies = {
         "http": os.environ["QUOTAGUARDSTATIC_URL"],
@@ -53,21 +53,26 @@ def request_new_token():
             "client_id": os.environ["client_id"],
             "client_secret": os.environ["client_secret"],
         },
+        cert=(cert_path, key_path),
     )
 
     a = json.loads(resp.content)
     token = a["access_token"]
-    return session, token
+    cert_id = a['x5t#S256']
+    return session, token, cert_id
 
 
 @singleton
 class DVPOAuth:
     """OAuth API for dvp app"""
 
-    def __init__(self, logging=None, token=None, session=None):
+    def __init__(self, logging=None, token=None, session=None, cert_path=None, key_path=None, cert_id=None):
         self.token = token
         self.session = session
         self.logging = logging
+        self.cert_path = cert_path
+        self.key_path = key_path
+        self.cert_id = cert_id
 
     """ class decorator """
     def _renew_token(foo):
@@ -79,7 +84,7 @@ class DVPOAuth:
                     logger.info(f"Existing token : {self.token}")
                 return foo(self, *args, **kwargs)
             except (MissingTokenError, AuthClientError) as e:
-                self.session, self.token = request_new_token()
+                self.session, self.token, self.cert_id = request_new_token(self.cert_path, self.key_path)
                 if self.logging:
                     logger.info(f"New token : {self.token}")
                 return foo(self, *args, **kwargs)
@@ -95,7 +100,7 @@ class DVPOAuth:
 
     def get_new_token(self):
         """return a new token"""
-        _, self.token = request_new_token()
+        _, self.token, self.cert_id = request_new_token(self.cert_path, self.key_path)
         return self.token
 
     @_renew_token
@@ -386,9 +391,9 @@ class DVPOAuth:
             "$filter": filter,
             "$expand": "ZAcctSearchNav",
         }
-
         resp_query = requests.get(
-            SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth}
+            SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth,"x5t#S256": self.cert_id},
+            cert=(self.cert_path, self.key_path)
         )
 
         if self.logging:
@@ -402,7 +407,6 @@ class DVPOAuth:
         resp = json.loads(resp_query.content)
         if self.logging:
             logger.info(f"Search response : {resp}")
-
         return resp_query.status_code, resp
 
 
@@ -441,7 +445,8 @@ class DVPOAuth:
         }
 
         resp_query = requests.get(
-            SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth}
+            SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth,"x5t#S256": self.cert_id},
+            cert=(self.cert_path, self.key_path)
         )
 
         if self.logging:
@@ -498,10 +503,11 @@ class DVPOAuth:
         }
         headers={
             'Accept-Encoding':'gzip,deflate',
-            "Authorization": auth
+            "Authorization": auth,
+            "x5t#S256": self.cert_id,
         }
         resp_query = requests.get(
-            USAGE_BASE_URL, params=usage_params, headers=headers
+            USAGE_BASE_URL, params=usage_params, headers=headers,cert=(self.cert_path, self.key_path)
         )
 
         if self.logging:
