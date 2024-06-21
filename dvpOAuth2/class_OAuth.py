@@ -185,7 +185,7 @@ class DVPOAuth:
                     {
                         'AmiMeter': None,
                         'MeterNumber': None,
-                        'RateCode': data['RETRACCTData']['RateCode'],
+                        'RateCode': []
                     }
                 ]
             },
@@ -194,6 +194,12 @@ class DVPOAuth:
             'SwitchActive': None,
             'SwitchInstalled': None
         }
+        for contracts in data['ZRetrContractsNav']['results']:
+            for rate in contracts['ZRetrInstallNav']['results']:
+                try:
+                    res['ServicePoint']['ServicePoint'][0]['RateCode'].append(rate['RateCode'])
+                except:
+                    pass
         return res
 
     def convert_eligibility_json_from_oauth_to_soap(self, status_code=None, resp=None):
@@ -441,9 +447,8 @@ class DVPOAuth:
         search_params = {
             "$format": "json",
             "$filter": filter,
-            "$expand": "ZAcctSearchNav",
+            "$expand": "ZRetrContractsNav/ZRetrInstallNav/ZRetrDeviceNav",
         }
-
         resp_query = requests.get(
             SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth,"x5t#S256": self.cert_id},
             cert=(self.cert_path, self.key_path)
