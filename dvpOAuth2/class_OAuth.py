@@ -366,7 +366,7 @@ class DVPOAuth:
                     SEARCH_PAR
                     + "SearchType eq 'MTR' and Meter eq '"
                     + dict["meter_number"]
-                    + "' and ActiveBaOnly eq 'Y' and QuantityRowsRequested eq 50"
+                    + "' and ActiveBaOnly eq 'N' and QuantityRowsRequested eq 50"
                 )
             elif dict["premise_number"]:
                 filter = (
@@ -383,7 +383,7 @@ class DVPOAuth:
                     + dict["street_name"] + "' and StreetType eq '"
                     + dict["street_type"] + "' and City eq'"
                     + dict["city"] + "' and State eq'"
-                    + dict["state"] + "' and ActiveBaOnly eq 'Y'"
+                    + dict["state"] + "' and ActiveBaOnly eq 'N'"
                 )
 
             else:
