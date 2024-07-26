@@ -332,7 +332,7 @@ class DVPOAuth:
         return return_dict
 
     @_renew_token
-    def account_search(self, *args, **kwargs):
+    def account_search(self, *args, only_active='N', **kwargs, ):
         """search account based on the account number, first and last name, meter number and premise number"""
         SEARCH_BASE_URL = os.environ["SEARCH_BASE_URL"]
         if not self.token:
@@ -350,7 +350,7 @@ class DVPOAuth:
                     SEARCH_PAR
                     + "SearchType eq 'ACC' and BillAccount eq '"
                     + account
-                    + "' and CallingApplication eq 'DSM' and ActiveBaOnly eq 'N' and QuantityRowsRequested eq 10 "
+                    + f"' and CallingApplication eq 'DSM' and ActiveBaOnly eq '{only_active}' and QuantityRowsRequested eq 10 "
                 )
             elif dict["first_name"] and dict["last_name"]:
                 filter = (
@@ -359,21 +359,21 @@ class DVPOAuth:
                     + dict["first_name"]
                     + "' and CustomerLastName eq '"
                     + dict["last_name"]
-                    + "' and ActiveBaOnly eq 'N'"
+                    + f"' and ActiveBaOnly eq '{only_active}'"
                 )
             elif dict["meter_number"]:
                 filter = (
                     SEARCH_PAR
                     + "SearchType eq 'MTR' and Meter eq '"
                     + dict["meter_number"]
-                    + "' and ActiveBaOnly eq 'N' and QuantityRowsRequested eq 50"
+                    + f"' and ActiveBaOnly eq '{only_active}' and QuantityRowsRequested eq 50"
                 )
             elif dict["premise_number"]:
                 filter = (
                     SEARCH_PAR
                     + "SearchType eq 'PRE' and Premise eq '"
                     + dict["premise_number"]
-                    + "' and ActiveBaOnly eq 'N'"
+                    + f"' and ActiveBaOnly eq '{only_active}'"
                 )
             elif dict["house_number"] and dict["street_name"] and dict["street_type"] and dict["city"] and dict["state"]:
                 filter = (
@@ -383,7 +383,7 @@ class DVPOAuth:
                     + dict["street_name"] + "' and StreetType eq '"
                     + dict["street_type"] + "' and City eq'"
                     + dict["city"] + "' and State eq'"
-                    + dict["state"] + "' and ActiveBaOnly eq 'N'"
+                    + dict["state"] + f"' and ActiveBaOnly eq '{only_active}'"
                 )
 
             else:
