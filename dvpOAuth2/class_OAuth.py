@@ -33,7 +33,7 @@ def singleton(cls):
     return wrapper
 
 
-def request_new_token(cert_path, key_path):
+def request_new_token(cert_path=None, key_path=None):
     session = requests.Session()
     session.proxies = {
         "http": os.environ["QUOTAGUARDSTATIC_URL"],
@@ -44,21 +44,35 @@ def request_new_token(cert_path, key_path):
         "Content-Type": "application/x-www-form-urlencoded",
     }
     params = {"grant_type": "client_credentials"}
+    if cert_path and key_path:
+        resp = session.post(
+            os.environ["Authentication"],
+            params=params,
+            headers=my_headers,
+            data={
+                "client_id": os.environ["client_id"],
+                "client_secret": os.environ["client_secret"],
+            },
+            cert=(cert_path, key_path),
+        )
 
-    resp = session.post(
-        os.environ["Authentication"],
-        params=params,
-        headers=my_headers,
-        data={
-            "client_id": os.environ["client_id"],
-            "client_secret": os.environ["client_secret"],
-        },
-        cert=(cert_path, key_path),
-    )
+        a = json.loads(resp.content)
+        token = a["access_token"]
+        cert_id = a['x5t#S256']
+    else:
+        resp = session.post(
+            os.environ["Authentication"],
+            params=params,
+            headers=my_headers,
+            data={
+                "client_id": os.environ["client_id"],
+                "client_secret": os.environ["client_secret"],
+            },
+        )
 
-    a = json.loads(resp.content)
-    token = a["access_token"]
-    cert_id = a['x5t#S256']
+        a = json.loads(resp.content)
+        token = a["access_token"]
+        cert_id = None
     return session, token, cert_id
 
 
@@ -397,10 +411,15 @@ class DVPOAuth:
             "$filter": filter,
             "$expand": "ZAcctSearchNav",
         }
-        resp_query = requests.get(
-            SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth,"x5t#S256": self.cert_id},
-            cert=(self.cert_path, self.key_path)
-        )
+        if self.cert_id:
+            resp_query = requests.get(
+                SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth,'Accept-Encoding':'gzip,deflate',"x5t#S256": self.cert_id},
+                cert=(self.cert_path, self.key_path)
+            )
+        else:
+            resp_query = requests.get(
+                SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth,'Accept-Encoding':'gzip,deflate'}
+            )
 
         if self.logging:
             logger.info(f"Search status code : {resp_query.status_code}")
@@ -449,11 +468,15 @@ class DVPOAuth:
             "$filter": filter,
             "$expand": "ZRetrContractsNav/ZRetrInstallNav/ZRetrDeviceNav",
         }
-        resp_query = requests.get(
-            SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth,"x5t#S256": self.cert_id},
-            cert=(self.cert_path, self.key_path)
-        )
-
+        if self.cert_id:
+            resp_query = requests.get(
+                SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth,"x5t#S256": self.cert_id},
+                cert=(self.cert_path, self.key_path)
+            )
+        else:
+            resp_query = requests.get(
+                SEARCH_BASE_URL, params=search_params, headers={"Authorization": auth}
+            )
         if self.logging:
             logger.info(f"Search status code : {resp_query.status_code}")
 
@@ -506,14 +529,15 @@ class DVPOAuth:
             "$filter": filter,
             "$expand": "ZUsageStatement",
         }
-        headers={
-            'Accept-Encoding':'gzip,deflate',
-            "Authorization": auth,
-            "x5t#S256": self.cert_id,
-        }
-        resp_query = requests.get(
-            USAGE_BASE_URL, params=usage_params, headers=headers,cert=(self.cert_path, self.key_path)
-        )
+        if self.cert_id:
+            resp_query = requests.get(
+                USAGE_BASE_URL, params=usage_params, headers={"Authorization": auth,'Accept-Encoding':'gzip,deflate',"x5t#S256": self.cert_id},
+                cert=(self.cert_path, self.key_path)
+            )
+        else:
+            resp_query = requests.get(
+                USAGE_BASE_URL, params=usage_params, headers={"Authorization": auth,'Accept-Encoding':'gzip,deflate'}
+            )
 
         if self.logging:
             logger.info(f"Usage status code : {resp_query.status_code}")
